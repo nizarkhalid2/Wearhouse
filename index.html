@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#06131b">
+<title>Warehouse — Live Inventory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="ambient"></div>
+<div id="app" class="stage">
+  <aside class="sidebar glass">
+    <div class="logo">W</div>
+    <nav aria-label="Main navigation">
+      <button data-page="dashboard" class="active" title="Dashboard">⌂</button>
+      <button data-page="inventory" title="Inventory">▦</button>
+      <button data-page="activity" title="Activity">◷</button>
+      <button data-page="admin" title="Admin">⚙</button>
+    </nav>
+    <button id="logout" class="logout hidden" title="Sign out">↪</button>
+  </aside>
+  <main class="main">
+    <header class="header">
+      <div><small>Warehouse control center</small><strong id="hello">Welcome</strong></div>
+      <div class="tools"><button id="searchBtn" title="Search inventory">⌕</button><span id="liveDot" class="live-dot" title="Live connection"></span><div class="avatar">W</div></div>
+    </header>
+    <div id="toast" class="toast" role="status"></div>
+    <div id="view"></div>
+  </main>
+</div>
+
+<dialog id="loginDialog"><form id="loginForm" class="modal glass">
+  <button type="button" class="close" onclick="loginDialog.close()">×</button><span class="eyebrow">PRIVATE ADMIN</span>
+  <h2>Welcome back.</h2><p>Only an approved administrator account can change the warehouse.</p>
+  <label>Email<input id="email" type="email" required autocomplete="email"></label>
+  <label>Password<input id="password" type="password" required autocomplete="current-password"></label>
+  <button class="primary" id="loginSubmit">Sign in</button><p id="loginMsg" class="error"></p>
+</form></dialog>
+
+<dialog id="productDialog"><form id="productForm" class="modal glass">
+  <button type="button" class="close" onclick="productDialog.close()">×</button><span class="eyebrow">INVENTORY</span>
+  <h2 id="formTitle">Add item</h2><input id="productId" type="hidden">
+  <label>Name<input id="pName" required maxlength="120"></label>
+  <label>Description<textarea id="pDesc" maxlength="500"></textarea></label>
+  <div class="twocol"><label>Quantity<input id="pQty" type="number" min="0" required></label><label>Location<input id="pLoc" required maxlength="50"></label></div>
+  <div class="twocol"><label>Category<input id="pCat" maxlength="60"></label><label>Price<input id="pPrice" type="number" min="0" step=".01"></label></div>
+  <label>Product image<input id="pImageFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif"><small class="field-note">PNG, JPG, WEBP or GIF • keep images reasonably small for the free plan.</small></label>
+  <label>Or image URL<input id="pImage" placeholder="https://..."></label>
+  <div id="imagePreview" class="image-preview hidden"></div>
+  <button class="primary" id="saveProduct">Save item</button><p id="formMsg" class="error"></p>
+</form></dialog>
+<script src="config.js"></script><script src="app.js"></script>
+</body></html>
