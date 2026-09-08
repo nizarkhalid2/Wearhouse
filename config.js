@@ -1,6 +1,6 @@
 window.WAREHOUSE_CONFIG = {
-  SUPABASE_URL: "PASTE_YOUR_SUPABASE_URL",
-  SUPABASE_ANON_KEY: "PASTE_YOUR_SUPABASE_ANON_OR_PUBLISHABLE_KEY",
+  SUPABASE_URL: "https://smbbhxankojvpmistdct.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_HUdlBXrjT0DSqs8MHNIjog_H6Wsn3fr",
   ADMIN_EMAIL: "admin@warehouse.com",
   STORAGE_BUCKET: "product-images"
 };
