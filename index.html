@@ -18,8 +18,9 @@
       <button data-page="dashboard" class="active"><span>⌂</span><b>Overview</b></button>
       <button data-page="inventory"><span>▦</span><b>Inventory</b></button>
       <button data-page="activity"><span>◷</span><b>Activity</b></button>
-      <button data-page="deliveries"><span>↗</span><b>Deliveries</b></button>
       <button data-page="admin"><span>⚙</span><b>Admin</b></button>
+      <button data-page="users" class="admin-only"><span>◎</span><b>Delivery Guys</b></button>
+      <button data-page="serials" class="admin-only"><span>№</span><b>Serials</b></button>
     </nav>
     <div class="side-bottom"><span class="status"><i id="liveDot"></i><span id="statusText">Connecting</span></span><button id="logout" class="logout hidden">Sign out ↗</button></div>
   </aside>
@@ -48,45 +49,22 @@
   <label>Or image URL<input id="pImage" placeholder="https://..."></label><div id="imagePreview" class="image-preview hidden"></div>
   <button class="primary" id="saveProduct">Save item</button><p id="formMsg" class="error"></p>
 </form></dialog>
-
+<dialog id="deliveryUserDialog"><form id="deliveryUserForm" class="modal glass">
+  <button type="button" class="close" onclick="deliveryUserDialog.close()">×</button>
+  <span class="eyebrow">DELIVERY ACCOUNT</span><h2>Create delivery guy.</h2>
+  <p>This creates a Supabase Auth account and links it to <b>profiles.role = delivery</b>.</p>
+  <label>Full name<input id="duName" required maxlength="120" placeholder="Delivery guy name"></label>
+  <label>Email<input id="duEmail" type="email" required autocomplete="email" placeholder="driver@example.com"></label>
+  <label>Temporary password<input id="duPassword" type="password" required minlength="8" autocomplete="new-password" placeholder="Minimum 8 characters"></label>
+  <button class="primary" id="createDeliveryUserBtn">Create account</button><p id="deliveryUserMsg" class="error"></p>
+</form></dialog>
 <dialog id="serialDialog"><form id="serialForm" class="modal glass">
   <button type="button" class="close" onclick="serialDialog.close()">×</button>
-  <span class="eyebrow">PHYSICAL UNITS</span>
-  <h2 id="serialTitle">Serial numbers</h2>
-  <p>Enter one serial number per line. These represent the actual items in the warehouse.</p>
-  <label>Serial numbers<textarea id="serialList" rows="10" placeholder="SN-001&#10;SN-002&#10;SN-003"></textarea></label>
-  <button class="primary" id="saveSerials">Save serials</button>
-  <p id="serialMsg" class="error"></p>
+  <span class="eyebrow">SERIAL NUMBER</span><h2>Add serial.</h2>
+  <p>Each physical unit gets one unique serial number.</p>
+  <label>Product<select id="serialProduct" required></select></label>
+  <label>Serial number<input id="serialNumber" required maxlength="120" placeholder="SN-000001"></label>
+  <button class="primary" id="saveSerialBtn">Save serial</button><p id="serialMsg" class="error"></p>
 </form></dialog>
-
-<dialog id="deliveryDialog"><form id="deliveryForm" class="modal glass">
-  <button type="button" class="close" onclick="deliveryDialog.close()">×</button>
-  <span class="eyebrow">DELIVERY REQUEST</span>
-  <h2>Request a delivery</h2>
-  <div id="deliveryItemPreview" class="delivery-item-preview"></div>
-  <input id="deliveryUnitId" type="hidden">
-  <label>Destination<input id="dDestination" required maxlength="180" placeholder="Muscat, Al Khuwair"></label>
-  <div class="twocol">
-    <label>Recipient<input id="dRecipient" maxlength="120" placeholder="Customer / company"></label>
-    <label>Delivery date<input id="dDate" type="date" required></label>
-  </div>
-  <label>Notes<textarea id="dNotes" rows="4" maxlength="500" placeholder="Optional delivery details"></textarea></label>
-  <button class="primary" id="submitDelivery">Send request <span>→</span></button>
-  <p id="deliveryMsg" class="error"></p>
-</form></dialog>
-
-<dialog id="noteDialog"><form id="noteForm" class="modal glass">
-  <button type="button" class="close" onclick="noteDialog.close()">×</button>
-  <span class="eyebrow">DELIVERY NOTE</span>
-  <h2>Complete the delivery</h2>
-  <p id="noteRequestText"></p>
-  <input id="noteRequestId" type="hidden">
-  <label>Delivery note / proof<input id="noteFile" type="file" accept="image/png,image/jpeg,image/webp,application/pdf"><small class="field-note">Photo or PDF · max 10 MB</small></label>
-  <label>Note number<input id="noteNumber" maxlength="80" placeholder="Optional"></label>
-  <label>Driver notes<textarea id="noteNotes" rows="4" maxlength="500" placeholder="Optional"></textarea></label>
-  <button class="primary" id="submitNote">Submit delivery note <span>→</span></button>
-  <p id="noteMsg" class="error"></p>
-</form></dialog>
-
 <script src="config.js"></script><script src="app.js"></script>
 </body></html>
