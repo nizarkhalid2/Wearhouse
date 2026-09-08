@@ -1432,3 +1432,800 @@ dialog::backdrop{
   .delivery-top{flex-direction:column}
   .delivery-grid{grid-template-columns:1fr}
 }
+/* =========================================================
+   DELIVERY SYSTEM
+   ========================================================= */
+
+.delivery-nav{
+  position:relative;
+}
+
+
+.nav-badge{
+  margin-left:auto;
+  min-width:18px;
+  height:18px;
+  padding:0 5px;
+  border-radius:20px;
+
+  display:grid;
+  place-items:center;
+
+  background:#dffaff;
+  color:#071217;
+
+  font:800 9px Inter;
+
+  box-shadow:
+    0 0 15px rgba(223,250,255,.18);
+}
+
+
+.notification-tool{
+  position:relative;
+}
+
+
+.notification-badge{
+  position:absolute;
+
+  right:-4px;
+  top:-4px;
+
+  min-width:17px;
+  height:17px;
+
+  padding:0 4px;
+
+  border-radius:20px;
+
+  display:grid;
+  place-items:center;
+
+  background:#dffaff;
+  color:#071217;
+
+  border:2px solid #07151b;
+
+  font:800 8px Inter;
+}
+
+
+/* =========================================================
+   DELIVERY PANEL
+   ========================================================= */
+
+.delivery-panel{
+  margin-top:12px;
+}
+
+
+.delivery-list{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+
+/* =========================================================
+   DELIVERY CARD
+   ========================================================= */
+
+.delivery-card{
+
+  border:1px solid rgba(255,255,255,.12);
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255,255,255,.075),
+      rgba(255,255,255,.025)
+    );
+
+  border-radius:18px;
+
+  padding:17px;
+
+  transition:
+    transform .25s var(--e),
+    border-color .25s var(--e),
+    background .25s var(--e);
+
+  animation:
+    rise .55s var(--e) both;
+}
+
+
+.delivery-card:hover{
+
+  transform:translateY(-2px);
+
+  border-color:
+    rgba(255,255,255,.24);
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255,255,255,.10),
+      rgba(255,255,255,.035)
+    );
+}
+
+
+.delivery-card-top{
+
+  display:flex;
+
+  align-items:flex-start;
+
+  justify-content:space-between;
+
+  gap:15px;
+
+  margin-bottom:16px;
+}
+
+
+.delivery-number{
+
+  display:block;
+
+  color:#fff5;
+
+  font:800 9px Inter;
+
+  letter-spacing:.14em;
+
+  margin-bottom:6px;
+}
+
+
+.delivery-card h3{
+
+  margin:0;
+
+  font:
+    600 18px
+    "Space Grotesk";
+
+}
+
+
+.delivery-status{
+
+  flex-shrink:0;
+
+  padding:7px 9px;
+
+  border-radius:9px;
+
+  background:rgba(255,255,255,.08);
+
+  border:1px solid rgba(255,255,255,.12);
+
+  color:#fff9;
+
+  font:800 8px Inter;
+
+  letter-spacing:.05em;
+}
+
+
+.delivery-status.warning{
+
+  background:rgba(255,208,140,.10);
+
+  border-color:rgba(255,208,140,.25);
+
+  color:#ffd99e;
+}
+
+
+.delivery-status.success{
+
+  background:rgba(185,244,223,.10);
+
+  border-color:rgba(185,244,223,.24);
+
+  color:#b9f4df;
+}
+
+
+.delivery-status.danger{
+
+  background:rgba(255,115,115,.10);
+
+  border-color:rgba(255,180,180,.25);
+
+  color:#ffdada;
+}
+
+
+/* =========================================================
+   DELIVERY GRID
+   ========================================================= */
+
+.delivery-card-grid{
+
+  display:grid;
+
+  grid-template-columns:
+    repeat(4,1fr);
+
+  gap:10px;
+
+  padding-top:14px;
+
+  border-top:
+    1px solid
+    rgba(255,255,255,.06);
+}
+
+
+.delivery-card-grid > div{
+
+  min-width:0;
+}
+
+
+.delivery-card-grid small{
+
+  display:block;
+
+  color:#fff4;
+
+  font:800 8px Inter;
+
+  letter-spacing:.13em;
+
+  margin-bottom:5px;
+}
+
+
+.delivery-card-grid b{
+
+  display:block;
+
+  color:#fff;
+
+  font-size:11px;
+
+  white-space:nowrap;
+
+  overflow:hidden;
+
+  text-overflow:ellipsis;
+}
+
+
+/* =========================================================
+   DELIVERY BOTTOM
+   ========================================================= */
+
+.delivery-card-bottom{
+
+  display:flex;
+
+  align-items:center;
+
+  justify-content:space-between;
+
+  gap:12px;
+
+  margin-top:15px;
+
+  padding-top:12px;
+
+  border-top:
+    1px solid
+    rgba(255,255,255,.06);
+}
+
+
+.delivery-card-bottom .actions{
+
+  margin-top:0;
+  padding-top:0;
+}
+
+
+/* =========================================================
+   SERIAL INPUT
+   ========================================================= */
+
+.serial-input{
+
+  display:grid;
+
+  grid-template-columns:1fr auto;
+
+  gap:8px;
+
+  margin-top:6px;
+}
+
+
+.serial-input .smallbtn{
+
+  min-width:78px;
+}
+
+
+/* =========================================================
+   SERIAL RESULT
+   ========================================================= */
+
+.serial-result{
+
+  display:flex;
+
+  align-items:center;
+
+  gap:12px;
+
+  margin-top:10px;
+
+  padding:11px;
+
+  border-radius:13px;
+
+  border:1px solid
+    rgba(255,255,255,.12);
+
+  background:
+    rgba(255,255,255,.045);
+}
+
+
+.serial-result img{
+
+  width:48px;
+  height:48px;
+
+  border-radius:11px;
+
+  object-fit:cover;
+}
+
+
+.serial-result > div{
+
+  flex:1;
+  min-width:0;
+}
+
+
+.serial-result b{
+
+  display:block;
+
+  font-size:12px;
+}
+
+
+.serial-result span{
+
+  display:block;
+
+  margin-top:3px;
+
+  color:#fff7;
+
+  font-size:9px;
+}
+
+
+.serial-result small{
+
+  display:block;
+
+  margin-top:4px;
+
+  color:#fff4;
+
+  font-size:9px;
+}
+
+
+.serial-result > strong{
+
+  flex-shrink:0;
+
+  color:#b9f4df;
+
+  font:800 8px Inter;
+
+  letter-spacing:.05em;
+}
+
+
+.serial-result.success{
+
+  border-color:
+    rgba(185,244,223,.22);
+
+  background:
+    rgba(185,244,223,.045);
+}
+
+
+.serial-result.error{
+
+  border-color:
+    rgba(255,150,150,.25);
+
+  background:
+    rgba(255,100,100,.045);
+
+  color:#ffdada;
+}
+
+
+.serial-result.error b{
+
+  color:#ffdada;
+}
+
+
+.serial-result.error span{
+
+  color:#fff7;
+}
+
+
+.serial-loading{
+
+  color:#fff7;
+  font-size:10px;
+}
+
+
+/* =========================================================
+   DELIVERY DETAILS
+   ========================================================= */
+
+.detail-status{
+
+  display:inline-block;
+
+  margin-top:8px;
+
+  padding:7px 9px;
+
+  border-radius:9px;
+
+  background:#fff0e;
+
+  border:1px solid #fff14;
+
+  color:#fff9;
+
+  font:800 8px Inter;
+
+  letter-spacing:.08em;
+}
+
+
+.detail-grid{
+
+  display:grid;
+
+  grid-template-columns:
+    repeat(2,1fr);
+
+  gap:12px;
+
+  margin-top:22px;
+}
+
+
+.detail-grid > div{
+
+  padding:12px;
+
+  border-radius:12px;
+
+  background:
+    rgba(255,255,255,.035);
+
+  border:1px solid
+    rgba(255,255,255,.07);
+}
+
+
+.detail-grid small{
+
+  display:block;
+
+  color:#fff4;
+
+  font:800 8px Inter;
+
+  letter-spacing:.12em;
+
+  margin-bottom:6px;
+}
+
+
+.detail-grid b{
+
+  display:block;
+
+  color:#fff;
+
+  font-size:11px;
+
+  line-height:1.5;
+
+  word-break:break-word;
+}
+
+
+.detail-wide{
+
+  grid-column:
+    1 / -1;
+}
+
+
+/* =========================================================
+   NOTIFICATIONS
+   ========================================================= */
+
+.notification-panel{
+
+  margin-top:12px;
+}
+
+
+.notification-row{
+
+  display:grid;
+
+  grid-template-columns:
+    36px 1fr;
+
+  gap:11px;
+
+  align-items:start;
+
+  padding:13px 0;
+
+  border-top:
+    1px solid
+    rgba(255,255,255,.06);
+
+  cursor:pointer;
+}
+
+
+.notification-row:first-child{
+
+  border-top:0;
+}
+
+
+.notification-icon{
+
+  width:30px;
+  height:30px;
+
+  border-radius:10px;
+
+  display:grid;
+  place-items:center;
+
+  background:
+    rgba(255,255,255,.06);
+
+  border:
+    1px solid
+    rgba(255,255,255,.10);
+
+  color:#fff8;
+
+  font-size:14px;
+}
+
+
+.notification-row.unread
+.notification-icon{
+
+  background:
+    rgba(223,250,255,.10);
+
+  border-color:
+    rgba(223,250,255,.20);
+
+  color:#dffaff;
+}
+
+
+.notification-row b{
+
+  display:block;
+
+  font-size:11px;
+}
+
+
+.notification-row p{
+
+  margin:4px 0;
+
+  color:#fff7;
+
+  font-size:10px;
+
+  line-height:1.5;
+}
+
+
+.notification-row time{
+
+  color:#fff4;
+
+  font-size:9px;
+}
+
+
+/* =========================================================
+   DELIVERY MODAL
+   ========================================================= */
+
+.delivery-modal{
+
+  width:min(
+    620px,
+    calc(100vw - 28px)
+  );
+}
+
+
+/* =========================================================
+   DELIVERY BUTTONS
+   ========================================================= */
+
+.delivery-approve{
+
+  background:
+    rgba(185,244,223,.10);
+
+  border-color:
+    rgba(185,244,223,.25);
+
+  color:#d5fff0;
+}
+
+
+.delivery-approve:hover{
+
+  background:
+    rgba(185,244,223,.19);
+
+  border-color:
+    rgba(185,244,223,.42);
+}
+
+
+.delivery-final{
+
+  background:
+    rgba(223,250,255,.11);
+
+  border-color:
+    rgba(223,250,255,.28);
+
+  color:#dffaff;
+}
+
+
+.delivery-final:hover{
+
+  background:
+    rgba(223,250,255,.20);
+
+  border-color:
+    rgba(223,250,255,.48);
+}
+
+
+.delivery-submit{
+
+  background:
+    rgba(255,255,255,.12);
+
+  border-color:
+    rgba(255,255,255,.28);
+}
+
+
+/* =========================================================
+   MOBILE DELIVERY
+   ========================================================= */
+
+@media(max-width:700px){
+
+  .delivery-card-top{
+
+    flex-direction:column;
+
+  }
+
+
+  .delivery-status{
+
+    align-self:flex-start;
+
+  }
+
+
+  .delivery-card-grid{
+
+    grid-template-columns:
+      repeat(2,1fr);
+
+  }
+
+
+  .delivery-card-bottom{
+
+    align-items:stretch;
+
+    flex-direction:column;
+
+  }
+
+
+  .delivery-card-bottom
+  .actions{
+
+    width:100%;
+
+  }
+
+
+  .delivery-card-bottom
+  .actions .smallbtn{
+
+    flex:1;
+
+  }
+
+
+  .serial-input{
+
+    grid-template-columns:1fr;
+
+  }
+
+
+  .serial-input .smallbtn{
+
+    width:100%;
+
+  }
+
+
+  .detail-grid{
+
+    grid-template-columns:1fr;
+
+  }
+
+
+  .detail-wide{
+
+    grid-column:auto;
+
+  }
+
+
+  .notification-row{
+
+    grid-template-columns:
+      32px 1fr;
+
+  }
+
+}
