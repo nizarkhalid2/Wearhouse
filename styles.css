@@ -1,237 +1,89 @@
-/* Global Styles & Variables */
-:root {
-    --primary-color: #2563eb;
-    --primary-hover: #1d4ed8;
-    --secondary-color: #4b5563;
-    --secondary-hover: #374151;
-    --success-color: #059669;
-    --success-hover: #047857;
-    --danger-color: #dc2626;
-    --danger-hover: #b91c1c;
-    --bg-color: #f3f4f6;
-    --card-bg: #ffffff;
-    --text-color: #1f2937;
-    --text-muted: #6b7280;
-    --border-color: #e5e7eb;
-}
-
+/* Warehouse Fixed Styles */
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
 body {
-    background-color: var(--bg-color);
-    color: var(--text-color);
-    line-height: 1.6;
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f9;
+    color: #333;
+    direction: rtl;
 }
 
 .container {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 0 20px;
+    width: 90%;
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 20px;
 }
 
-/* Navbar */
-.navbar {
-    background-color: #1e293b;
-    color: #ffffff;
-    padding: 15px 0;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.nav-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.logo {
-    font-size: 1.4rem;
-    font-weight: bold;
-}
-
-.user-badge {
-    background-color: #334155;
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    margin-left: 10px;
-    color: #f8fafc;
-}
-
-/* Main Layout & Cards */
-.main-content {
-    margin-top: 30px;
-    margin-bottom: 50px;
-}
-
-.card {
-    background: var(--card-bg);
-    border-radius: 10px;
-    padding: 24px;
-    margin-bottom: 24px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    border: 1px solid var(--border-color);
-}
-
-.admin-card {
-    border-top: 4px solid var(--primary-color);
-    background-color: #f8fafc;
-}
-
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    border-bottom: 2px solid var(--bg-color);
-    padding-bottom: 10px;
-}
-
-/* Fixed Buttons Styling - Explicit High Contrast */
-button, .btn {
+/* Base Button Fix - حل مشكلة الأزرار الملتصقة والألوان المخفية */
+button, .btn, input[type="submit"] {
     display: inline-block;
-    background-color: var(--primary-color);
-    color: #ffffff !important;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 6px;
-    font-size: 0.95rem;
-    font-weight: 600;
+    padding: 10px 18px;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: bold;
     cursor: pointer;
-    transition: all 0.2s ease-in-out;
+    border: 1px solid transparent;
     text-align: center;
     text-decoration: none;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
-button:hover, .btn:hover {
-    background-color: var(--primary-hover);
-    opacity: 0.95;
-}
-
-.btn-primary {
-    background-color: var(--primary-color) !important;
+/* Primary Buttons */
+.btn-primary, button.primary {
+    background-color: #2563eb !important;
     color: #ffffff !important;
+    border-color: #2563eb !important;
 }
 
-.btn-secondary {
-    background-color: var(--secondary-color) !important;
+.btn-primary:hover, button.primary:hover {
+    background-color: #1d4ed8 !important;
+}
+
+/* Secondary Buttons */
+.btn-secondary, button.secondary {
+    background-color: #4b5563 !important;
     color: #ffffff !important;
+    border-color: #4b5563 !important;
 }
 
-.btn-secondary:hover {
-    background-color: var(--secondary-hover) !important;
+.btn-secondary:hover, button.secondary:hover {
+    background-color: #374151 !important;
 }
 
-.btn-success {
-    background-color: var(--success-color) !important;
+/* Danger / Delete Buttons */
+.btn-danger, button.danger {
+    background-color: #dc2626 !important;
     color: #ffffff !important;
+    border-color: #dc2626 !important;
 }
 
-.btn-success:hover {
-    background-color: var(--success-hover) !important;
+.btn-danger:hover, button.danger:hover {
+    background-color: #b91c1c !important;
 }
 
-.btn-danger {
-    background-color: var(--danger-color) !important;
-    color: #ffffff !important;
-}
-
-.btn-danger:hover {
-    background-color: var(--danger-hover) !important;
-}
-
-.btn-block {
-    width: 100%;
-    display: block;
-}
-
-.btn-sm {
-    padding: 5px 10px;
-    font-size: 0.85rem;
-}
-
-/* Form Styling */
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 15px;
-    margin-bottom: 20px;
-}
-
-.form-group {
-    margin-bottom: 15px;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 6px;
-    font-weight: 600;
-    color: #374151;
-}
-
-.form-input {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 0.95rem;
-    transition: border-color 0.2s;
-}
-
-.form-input:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
-}
-
-/* Table Styling */
-.table-responsive {
-    overflow-x: auto;
-}
-
-.data-table {
+/* Tables & Admin Controls */
+table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 10px;
+    margin-top: 20px;
+    background: #fff;
 }
 
-.data-table th, .data-table td {
-    padding: 12px 16px;
-    text-align: right;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.data-table th {
-    background-color: #f8fafc;
-    color: #475569;
-    font-weight: 700;
-}
-
-.data-table tr:hover {
-    background-color: #f1f5f9;
-}
-
-/* Utility / Alerts */
-.alert {
+th, td {
     padding: 12px;
-    border-radius: 6px;
-    margin-bottom: 15px;
-    font-size: 0.9rem;
+    text-align: right;
+    border-bottom: 1px solid #ddd;
 }
 
-.alert-error {
-    background-color: #fef2f2;
-    color: #991b1b;
-    border: 1px solid #fecaca;
+th {
+    background-color: #eaeaea;
 }
 
-.spinner {
-    text-align: center;
-    padding: 20px;
-    color: var(--text-muted);
-    font-weight: bold;
+.admin-only, #admin-panel {
+    transition: opacity 0.3s ease;
 }
