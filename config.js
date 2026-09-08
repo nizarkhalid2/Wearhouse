@@ -4,3 +4,14 @@ window.WAREHOUSE_CONFIG = {
   ADMIN_EMAIL: "admin@warehouse.com",
   STORAGE_BUCKET: "product-images"
 };
+
+// Initialize Supabase Client safely using WAREHOUSE_CONFIG
+let supabaseClient = null;
+if (typeof supabase !== 'undefined') {
+    supabaseClient = supabase.createClient(
+        window.WAREHOUSE_CONFIG.SUPABASE_URL, 
+        window.WAREHOUSE_CONFIG.SUPABASE_ANON_KEY
+    );
+} else {
+    console.error("Supabase SDK not loaded!");
+}
