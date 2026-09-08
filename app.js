@@ -13,13 +13,11 @@ const sb =
 
 let products = [];
 let activities = [];
+let profiles = [];
+let serials = [];
 let user = null;
 let isAdmin = false;
-let role = 'public';
 let profile = null;
-let units = [];
-let deliveries = [];
-let notifications = [];
 let currentPage = 'dashboard';
 let realtimeChannel = null;
 
@@ -131,28 +129,15 @@ async function boot() {
 
 async function refreshAuth() {
   isAdmin = false;
-  role = 'public';
   profile = null;
-
-  if (!user || !sb) {
-    updateAuth();
-    return;
-  }
-
-  const [a, p] = await Promise.all([
+  if (!user || !sb) { updateAuth(); return; }
+  const [adminRow, profileRow] = await Promise.all([
     sb.from('admin_users').select('user_id').eq('user_id', user.id).maybeSingle(),
-    sb.from('profiles').select('id,full_name,role').eq('id', user.id).maybeSingle()
+    sb.from('profiles').select('*').eq('user_id', user.id).maybeSingle()
   ]);
-
-  if (!a.error && a.data) isAdmin = true;
-
-  if (!p.error && p.data) {
-    profile = p.data;
-    role = p.data.role || (isAdmin ? 'admin' : 'public');
-  } else if (isAdmin) {
-    role = 'admin';
-  }
-
+  isAdmin = !adminRow.error && !!adminRow.data;
+  profile = profileRow.data || null;
+  if (profile?.role === 'admin') isAdmin = true;
   updateAuth();
 }
 
@@ -161,19 +146,24 @@ function updateAuth() {
   const avatar = $('avatar');
   const logout = $('logout');
 
-  const displayName = profile?.full_name || user?.email || 'Warehouse';
-
   if (hello) {
     hello.textContent = user
-      ? `${role === 'admin' ? 'Admin' : role === 'delivery_guy' ? 'Delivery ·' : 'Signed in ·'} ${displayName}`
+      ? (isAdmin
+          ? `Admin · ${user.email}`
+          : profile?.role === 'delivery'
+            ? `Delivery · ${profile.full_name || user.email}`
+            : `Signed in · ${user.email}`)
       : 'Public inventory';
   }
 
-  if (avatar) avatar.textContent = displayName.slice(0, 1).toUpperCase();
-  if (logout) logout.classList.toggle('hidden', !user);
+  if (avatar) {
+    avatar.textContent =
+      (user?.email || 'W').slice(0, 1).toUpperCase();
+  }
 
-  const adminQuick = $('adminQuick');
-  if (adminQuick) adminQuick.classList.toggle('hidden', !isAdmin);
+  if (logout) {
+    logout.classList.toggle('hidden', !user);
+  }
 }
 
 
@@ -186,23 +176,44 @@ function updateAuth() {
 async function loadAll() {
   if (!sb) return;
 
-  const queries = [
+  const [p, a] = await Promise.all([
     sb.from('products').select('*'),
-    sb.from('activity').select('*'),
-    sb.from('inventory_units').select('*, products(name,category,location,image_url,price)').order('created_at',{ascending:false}),
-    sb.from('delivery_requests').select('*, profiles:delivery_guy_id(full_name,email), inventory_units(serial_number), products:product_id(name,category,image_url)').order('created_at',{ascending:false}),
-    user ? sb.from('notifications').select('*').eq('recipient_id', user.id).order('created_at',{ascending:false}).limit(30) : Promise.resolve({data:[],error:null})
-  ];
+    sb.from('activity').select('*')
+  ]);
 
-  const [p,a,u,d,n] = await Promise.all(queries);
-
-  if (p.error) toast(p.error.message,'error'); else products = p.data || [];
-  if (!a.error) {
-    activities = (a.data || []).sort((x,y)=>getDateValue(y)-getDateValue(x)).slice(0,60);
+  if (isAdmin) {
+    const [pr, sr] = await Promise.all([
+      sb.from('profiles').select('*').eq('role', 'delivery').order('created_at', { ascending: false }),
+      sb.from('product_serials').select('*, products(name)').order('created_at', { ascending: false })
+    ]);
+    profiles = pr.error ? [] : (pr.data || []);
+    serials = sr.error ? [] : (sr.data || []);
+  } else {
+    profiles = [];
+    serials = [];
   }
-  if (!u.error) units = u.data || [];
-  if (!d.error) deliveries = d.data || [];
-  if (!n.error) notifications = n.data || [];
+
+  if (p.error) {
+    console.error('Products error:', p.error);
+    toast(p.error.message, 'error');
+  } else {
+    products = p.data || [];
+  }
+
+  if (a.error) {
+    console.warn('Activity error:', a.error);
+  } else {
+    activities = a.data || [];
+
+    activities.sort((x, y) => {
+      const dx = getDateValue(x);
+      const dy = getDateValue(y);
+
+      return dy - dx;
+    });
+
+    activities = activities.slice(0, 60);
+  }
 }
 
 
@@ -251,17 +262,6 @@ function subscribeRealtime() {
         render();
         setConnection(true);
       }
-    )
-
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'delivery_requests' },
-      async () => { await loadAll(); render(); if (user) toast('Delivery update received'); }
-    )
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'notifications' },
-      async () => { await loadAll(); render(); if (currentPage !== 'deliveries') toast('New warehouse notification'); }
     )
 
     .on(
@@ -331,7 +331,7 @@ function renderSetup() {
         <div class="panel glass">
           <b>02</b>
           <h3>Admin protected</h3>
-          <p>Admins manage stock; delivery accounts can manage only their delivery workflow.</p>
+          <p>Only your approved user can write.</p>
         </div>
 
         <div class="panel glass">
@@ -352,31 +352,18 @@ function renderSetup() {
 ========================= */
 
 function render() {
-  const deliveryNav = document.querySelector('[data-page="deliveries"]');
-  if (deliveryNav) deliveryNav.classList.toggle('hidden', !user || !['admin','delivery_guy'].includes(role));
-
-  document
-    .querySelectorAll('.sidebar nav button')
-    .forEach(b => {
-      b.classList.toggle(
-        'active',
-        b.dataset.page === currentPage
-      );
-    });
-
-  if (currentPage === 'dashboard') {
-    dashboard();
-  } else if (currentPage === 'inventory') {
-    inventory();
-  } else if (currentPage === 'activity') {
-    activity();
-  } else if (currentPage === 'admin') {
-    admin();
-  } else if (currentPage === 'deliveries') {
-    deliveriesPage();
-  }
+  document.querySelectorAll('.sidebar nav button').forEach(b => {
+    b.classList.toggle('active', b.dataset.page === currentPage);
+    if (b.classList.contains('admin-only')) b.classList.toggle('hidden', !isAdmin);
+  });
+  if (!isAdmin && (currentPage === 'users' || currentPage === 'serials')) currentPage = 'dashboard';
+  if (currentPage === 'dashboard') dashboard();
+  else if (currentPage === 'inventory') inventory();
+  else if (currentPage === 'activity') activity();
+  else if (currentPage === 'admin') admin();
+  else if (currentPage === 'users') adminUsers();
+  else if (currentPage === 'serials') serialManager();
 }
-
 
 /* =========================
    DASHBOARD
@@ -423,12 +410,6 @@ function dashboard() {
       </p>
 
       <div class="hero-actions">
-
-        ${
-          role === 'delivery_guy'
-            ? `<button class="primary" onclick="go('deliveries')">Open delivery desk <span>→</span></button>`
-            : ''
-        }
 
         <button
           class="primary"
@@ -1191,8 +1172,6 @@ function admin() {
               </div>
 
 
-              <button type="button" class="smallbtn edit-btn" onclick="manageSerials('${p.id}')"><span class="btn-icon">#</span><span>Serials</span></button>
-
               <button
                 type="button"
                 class="smallbtn edit-btn"
@@ -1228,232 +1207,10 @@ function admin() {
         )
       }
 
-
-    <section class="panel glass">
-      <div class="head">
-        <div><small class="section-label">DELIVERY CONTROL</small><h2>Delivery requests</h2></div>
-        <span class="pill">${deliveries.filter(d=>d.status!=='completed' && d.status!=='rejected').length} active</span>
-      </div>
-      ${adminDeliveryCards()}
     </section>
   `;
 }
 
-
-
-function unitForDelivery(id) {
-  return units.find(u => u.id === id);
-}
-
-function openDeliveryForProduct(productId) {
-  if (role !== 'delivery_guy') {
-    toast('Delivery access is for delivery accounts.', 'error');
-    return;
-  }
-  const available = units.filter(u => u.product_id === productId && u.status === 'available');
-  if (!available.length) {
-    toast('No available serial-numbered unit for this product.', 'error');
-    go('deliveries');
-    return;
-  }
-  const p = products.find(x=>x.id===productId);
-  $('deliveryUnitId').value = available[0].id;
-  $('deliveryItemPreview').innerHTML = `<b>${esc(p?.name || 'Item')}</b><span>Serial: ${esc(available[0].serial_number)}</span>`;
-  $('dDestination').value='';
-  $('dRecipient').value='';
-  $('dDate').value=new Date().toISOString().slice(0,10);
-  $('dNotes').value='';
-  $('deliveryMsg').textContent='';
-  deliveryDialog.showModal();
-}
-
-function deliveryCard(d, adminMode=false) {
-  const driver = d.profiles?.full_name || d.profiles?.email || d.delivery_guy_id || 'Delivery';
-  const item = d.products?.name || 'Item';
-  const serial = d.inventory_units?.serial_number || d.serial_number || '—';
-  const statusLabel = ({
-    pending_admin_approval:'Awaiting admin',
-    approved_for_delivery:'Approved · in delivery',
-    delivery_note_submitted:'Note submitted · review',
-    completed:'Completed',
-    rejected:'Rejected'
-  })[d.status] || d.status;
-
-  let action='';
-  if (adminMode && d.status==='pending_admin_approval')
-    action=`<button class="smallbtn" onclick="approveDelivery('${d.id}')">✓ Accept</button><button class="smallbtn danger" onclick="rejectDelivery('${d.id}')">× Reject</button>`;
-  if (adminMode && d.status==='delivery_note_submitted')
-    action=`<button class="smallbtn" onclick="completeDelivery('${d.id}')">✓ Accept delivery</button><button class="smallbtn danger" onclick="rejectDelivery('${d.id}',true)">× Reject</button>`;
-  if (!adminMode && d.status==='approved_for_delivery')
-    action=`<button class="smallbtn" onclick="openNote('${d.id}')">Upload delivery note</button>`;
-
-  return `<article class="delivery-card glass">
-    <div class="delivery-top"><div><span class="section-label">${esc(statusLabel)}</span><h3>${esc(item)}</h3></div><span class="delivery-status ${esc(d.status)}">${esc(statusLabel)}</span></div>
-    <div class="delivery-grid">
-      <div><small>Serial</small><b>${esc(serial)}</b></div>
-      <div><small>Delivery guy</small><b>${esc(driver)}</b></div>
-      <div><small>Destination</small><b>${esc(d.destination)}</b></div>
-      <div><small>Date</small><b>${esc(d.delivery_date || '—')}</b></div>
-      <div><small>Recipient</small><b>${esc(d.recipient || '—')}</b></div>
-      <div><small>Created</small><b>${timeAgo(getDateValue(d))}</b></div>
-    </div>
-    ${d.delivery_note_url ? `<a class="note-link" href="${esc(d.delivery_note_url)}" target="_blank" rel="noopener">View delivery note ↗</a>` : ''}
-    ${action ? `<div class="delivery-actions">${action}</div>` : ''}
-  </article>`;
-}
-
-function adminDeliveryCards() {
-  const active = deliveries.filter(d=>d.status!=='completed' && d.status!=='rejected');
-  return active.map(d=>deliveryCard(d,true)).join('') || empty('No delivery requests','New requests will appear here in real time.');
-}
-
-function deliveriesPage() {
-  if (!user || !['admin','delivery_guy'].includes(role)) {
-    view.innerHTML = `<section class="hero"><span class="eyebrow">PRIVATE DELIVERY DESK</span><h1>Delivery<br><em>access.</em></h1><p>Sign in with a delivery or administrator account to use the warehouse delivery workflow.</p><button class="primary" onclick="loginDialog.showModal()">Sign in <span>→</span></button></section>`;
-    return;
-  }
-
-  const mine = role === 'delivery_guy'
-    ? deliveries.filter(d=>d.delivery_guy_id===user.id)
-    : deliveries;
-
-  const unread = notifications.filter(n=>!n.read_at).length;
-  view.innerHTML = `
-    <section class="hero compact">
-      <span class="eyebrow">${role === 'admin' ? 'ADMIN · DELIVERY CONTROL' : 'DELIVERY · FIELD DESK'}</span>
-      <h1>${role === 'admin' ? 'Delivery<br><em>control.</em>' : 'Deliveries<br><em>in motion.</em>'}</h1>
-      <p>${role === 'admin' ? 'Approve requests, review delivery notes, and finalize stock deduction.' : 'Scan or enter a warehouse serial number, request delivery, then upload the signed delivery note after delivery.'}</p>
-      ${role === 'delivery_guy' ? `<button class="primary" onclick="openDeliveryPicker()">＋ New delivery request</button>` : ''}
-      ${role === 'admin' && unread ? `<button class="ghost" onclick="markNotificationsRead()">Mark ${unread} notification${unread>1?'s':''} read</button>` : ''}
-    </section>
-    ${role === 'admin' ? `<section class="panel glass"><div class="head"><div><small class="section-label">NOTIFICATIONS</small><h2>Alerts</h2></div><span class="pill">${unread} unread</span></div>${notifications.slice(0,8).map(n=>`<div class="notification-row ${n.read_at?'':'unread'}"><b>${esc(n.title)}</b><span>${esc(n.body)}</span><time>${timeAgo(getDateValue(n))}</time></div>`).join('') || empty('No notifications','You are up to date.')}</section>` : ''}
-    <section class="panel glass"><div class="head"><div><small class="section-label">WORKFLOW</small><h2>${role==='admin'?'All deliveries':'My deliveries'}</h2></div><span class="pill">${mine.length} requests</span></div>${mine.map(d=>deliveryCard(d,role==='admin')).join('') || empty('No deliveries yet', role==='admin'?'Delivery requests will appear here.':'Create your first delivery request.')}</section>
-  `;
-}
-
-function openDeliveryPicker() {
-  const available = units.filter(u=>u.status==='available');
-  if (!available.length) {
-    toast('No serial-numbered inventory is available.', 'error');
-    return;
-  }
-  view.innerHTML = `
-    <section class="hero compact"><span class="eyebrow">SCAN / ENTER SERIAL</span><h1>Select the<br><em>physical item.</em></h1><p>Search the warehouse serial number. The selected unit will be reserved only after admin approval.</p></section>
-    <section class="panel glass"><div class="head"><div><small class="section-label">AVAILABLE UNITS</small><h2>Serial number</h2></div><input id="serialSearch" class="search" placeholder="Type / scan serial…" autofocus></div><div id="unitPicker" class="unit-picker">${available.map(unitPickerCard).join('')}</div></section>`;
-  $('serialSearch').oninput=()=>{
-    const q=$('serialSearch').value.trim().toLowerCase();
-    $('unitPicker').innerHTML=available.filter(u=>u.serial_number.toLowerCase().includes(q) || (u.products?.name||'').toLowerCase().includes(q)).map(unitPickerCard).join('') || empty('No matching serial','Try another serial number.');
-  };
-}
-
-function unitPickerCard(u) {
-  const p=u.products || {};
-  return `<button type="button" class="unit-card" onclick="openDeliveryForUnit('${u.id}')"><span class="unit-icon">▣</span><span><b>${esc(p.name||'Item')}</b><small>${esc(u.serial_number)} · ${esc(p.location||'')}</small></span><span>→</span></button>`;
-}
-
-function openDeliveryForUnit(id) {
-  const u=unitForDelivery(id);
-  if(!u || u.status!=='available') return toast('That unit is no longer available.','error');
-  const p=u.products||products.find(x=>x.id===u.product_id);
-  $('deliveryUnitId').value=id;
-  $('deliveryItemPreview').innerHTML=`<b>${esc(p?.name||'Item')}</b><span>Serial: ${esc(u.serial_number)}</span>`;
-  $('dDestination').value=''; $('dRecipient').value=''; $('dDate').value=new Date().toISOString().slice(0,10); $('dNotes').value=''; $('deliveryMsg').textContent='';
-  deliveryDialog.showModal();
-}
-
-async function notifyUser(recipientId,title,body,type,referenceId) {
-  if(!sb || !recipientId) return;
-  await sb.from('notifications').insert({recipient_id:recipientId,title,body,type,reference_id:referenceId});
-}
-
-async function approveDelivery(id) {
-  if(!isAdmin) return;
-  const {data,error}=await sb.rpc('approve_delivery_request',{request_id:id});
-  if(error){toast(error.message,'error');return;}
-  toast('Delivery approved. Item reserved.');
-  await loadAll(); render();
-}
-
-async function rejectDelivery(id, afterNote=false) {
-  if(!isAdmin) return;
-  const reason=prompt('Optional rejection reason:')||'';
-  const {error}=await sb.rpc('reject_delivery_request',{request_id:id,rejection_reason:reason});
-  if(error){toast(error.message,'error');return;}
-  toast('Delivery request rejected.');
-  await loadAll(); render();
-}
-
-async function completeDelivery(id) {
-  if(!isAdmin) return;
-  const {data,error}=await sb.rpc('complete_delivery_request',{request_id:id});
-  if(error){toast(error.message,'error');return;}
-  toast('Delivery completed. Inventory deducted.');
-  await loadAll(); render();
-}
-
-async function markNotificationsRead() {
-  if(!user) return;
-  const {error}=await sb.from('notifications').update({read_at:new Date().toISOString()}).eq('recipient_id',user.id).is('read_at',null);
-  if(error) toast(error.message,'error'); else { await loadAll(); render(); }
-}
-
-async function uploadDeliveryNote(file) {
-  if(!file) throw Error('Choose a delivery note first.');
-  if(file.size>10*1024*1024) throw Error('File is larger than 10 MB.');
-  const allowed=['image/png','image/jpeg','image/webp','application/pdf'];
-  if(!allowed.includes(file.type)) throw Error('Use JPG, PNG, WEBP or PDF.');
-  const ext=(file.name.split('.').pop()||'bin').toLowerCase();
-  const path=`delivery-notes/${user.id}/${crypto.randomUUID()}.${ext}`;
-  const up=await sb.storage.from('delivery-notes').upload(path,file,{upsert:false,contentType:file.type});
-  if(up.error) throw up.error;
-  return sb.storage.from('delivery-notes').getPublicUrl(path).data.publicUrl;
-}
-
-function openNote(id) {
-  const d=deliveries.find(x=>x.id===id);
-  if(!d) return;
-  $('noteRequestId').value=id;
-  $('noteRequestText').textContent=`${d.products?.name||'Item'} · Serial ${d.inventory_units?.serial_number||'—'} · ${d.destination}`;
-  $('noteFile').value=''; $('noteNumber').value=''; $('noteNotes').value=''; $('noteMsg').textContent='';
-  noteDialog.showModal();
-}
-
-$('deliveryForm').onsubmit=async e=>{
-  e.preventDefault();
-  if(role!=='delivery_guy') return;
-  const btn=$('submitDelivery'); busy(btn,true,'Sending…'); $('deliveryMsg').textContent='';
-  try{
-    const unit=unitForDelivery($('deliveryUnitId').value);
-    if(!unit || unit.status!=='available') throw Error('Selected item is no longer available.');
-    const {data,error}=await sb.from('delivery_requests').insert({
-      delivery_guy_id:user.id, product_id:unit.product_id, unit_id:unit.id,
-      destination:$('dDestination').value.trim(), recipient:$('dRecipient').value.trim(),
-      delivery_date:$('dDate').value, notes:$('dNotes').value.trim()
-    }).select().single();
-    if(error) throw error;
-    deliveryDialog.close(); toast('Request sent to admin.');
-    await loadAll(); go('deliveries');
-  }catch(err){$('deliveryMsg').textContent=err.message||String(err);}
-  finally{busy(btn,false);}
-};
-
-$('noteForm').onsubmit=async e=>{
-  e.preventDefault();
-  if(role!=='delivery_guy') return;
-  const btn=$('submitNote'); busy(btn,true,'Uploading…'); $('noteMsg').textContent='';
-  try{
-    const url=await uploadDeliveryNote($('noteFile').files[0]);
-    const {error}=await sb.from('delivery_requests').update({
-      status:'delivery_note_submitted',delivery_note_url:url,
-      delivery_note_number:$('noteNumber').value.trim(),driver_notes:$('noteNotes').value.trim(),
-      delivered_at:new Date().toISOString()
-    }).eq('id',$('noteRequestId').value).eq('delivery_guy_id',user.id);
-    if(error) throw error;
-    noteDialog.close(); toast('Delivery note submitted for admin review.');
-    await loadAll(); go('deliveries');
-  }catch(err){$('noteMsg').textContent=err.message||String(err);}
-  finally{busy(btn,false);}
-};
 
 /* =========================
    EMPTY
@@ -1686,40 +1443,6 @@ async function uploadImage(file) {
     .publicUrl;
 }
 
-
-
-function manageSerials(productId) {
-  if(!isAdmin) return;
-  const p=products.find(x=>x.id===productId);
-  if(!p) return;
-  $('serialTitle').textContent=`Serials · ${p.name}`;
-  $('serialForm').dataset.productId=productId;
-  $('serialList').value=units.filter(u=>u.product_id===productId).map(u=>u.serial_number).join('\n');
-  $('serialMsg').textContent='';
-  serialDialog.showModal();
-}
-
-$('serialForm').onsubmit=async e=>{
-  e.preventDefault();
-  if(!isAdmin) return;
-  const productId=$('serialForm').dataset.productId;
-  const serials=[...new Set($('serialList').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean))];
-  const btn=$('saveSerials'); busy(btn,true,'Saving…'); $('serialMsg').textContent='';
-  try{
-    const {data:existing,error:exErr}=await sb.from('inventory_units').select('id,serial_number,status').eq('product_id',productId);
-    if(exErr) throw exErr;
-    const keep=new Set(serials);
-    const deletable=(existing||[]).filter(u=>!keep.has(u.serial_number)&&u.status==='available').map(u=>u.id);
-    if(deletable.length){const {error}=await sb.from('inventory_units').delete().in('id',deletable); if(error) throw error;}
-    const existingSerials=new Set((existing||[]).map(u=>u.serial_number));
-    const add=serials.filter(s=>!existingSerials.has(s)).map(serial_number=>({product_id:productId,serial_number,status:'available'}));
-    if(add.length){const {error}=await sb.from('inventory_units').insert(add); if(error) throw error;}
-    const {error:qtyErr}=await sb.from('products').update({quantity:serials.length}).eq('id',productId);
-    if(qtyErr) throw qtyErr;
-    serialDialog.close(); toast('Serials updated.'); await loadAll(); render();
-  }catch(err){$('serialMsg').textContent=err.message||String(err);}
-  finally{busy(btn,false);}
-};
 
 /* =========================
    DELETE PRODUCT
@@ -2044,6 +1767,93 @@ $('pImageFile')?.addEventListener(
   }
 );
 
+
+/* =========================
+   ADMIN USER MANAGEMENT
+========================= */
+
+function adminUsers() {
+  if (!isAdmin) return admin();
+  view.innerHTML = `
+    <section class="hero compact">
+      <span class="eyebrow">ADMIN · TEAM</span>
+      <h1>Delivery<br><em>accounts.</em></h1>
+      <p>Create and manage delivery accounts. Each account is linked to <b>profiles.role = delivery</b>.</p>
+      <div class="hero-actions"><button class="primary" onclick="deliveryUserDialog.showModal()">＋ Add delivery guy</button><button class="ghost" onclick="go('serials')">Manage serials →</button></div>
+    </section>
+    <section class="panel glass">
+      <div class="head"><div><small class="section-label">DELIVERY TEAM</small><h2>Delivery guys</h2></div><span class="pill">${profiles.length} accounts</span></div>
+      ${profiles.map(p => `
+        <div class="item admin-row"><div class="avatar small-avatar">${esc((p.full_name || p.email || 'D').slice(0,1).toUpperCase())}</div><div class="itemmain"><b>${esc(p.full_name || 'Unnamed')}</b><span>${esc(p.email || '—')} · <span class="status-pill">${p.active === false ? 'DISABLED' : 'DELIVERY'}</span></span></div>${p.active === false ? '' : `<button class="smallbtn danger" onclick="disableDeliveryUser('${p.user_id}')">Disable</button>`}</div>`).join('') || empty('No delivery accounts yet','Create your first delivery guy above.')}
+    </section>`;
+}
+
+async function createDeliveryUser(e) {
+  e?.preventDefault();
+  if (!isAdmin) return;
+  const btn = $('createDeliveryUserBtn'), msg = $('deliveryUserMsg');
+  const full_name = $('duName')?.value.trim(), email = $('duEmail')?.value.trim().toLowerCase(), password = $('duPassword')?.value;
+  if (!full_name || !email || !password) return;
+  if (password.length < 8) { msg.textContent = 'Password must be at least 8 characters.'; return; }
+  busy(btn, true, 'Creating…'); msg.textContent = '';
+  try {
+    const { data, error } = await sb.functions.invoke('create-delivery-user', { body: { full_name, email, password } });
+    if (error) throw error;
+    if (!data?.ok) throw new Error(data?.error || 'Could not create account.');
+    deliveryUserDialog.close(); $('deliveryUserForm')?.reset(); toast('Delivery account created.', 'success'); await loadAll(); render();
+  } catch (err) { console.error(err); msg.textContent = err.message || 'Could not create account.'; }
+  finally { busy(btn, false); }
+}
+
+async function disableDeliveryUser(id) {
+  if (!isAdmin || !id) return;
+  if (!confirm('Disable this delivery account?')) return;
+  const { error } = await sb.from('profiles').update({ active: false }).eq('user_id', id).eq('role', 'delivery');
+  if (error) return toast(error.message, 'error');
+  toast('Delivery account disabled.', 'success'); await loadAll(); render();
+}
+
+/* =========================
+   SERIAL NUMBER MANAGER
+========================= */
+
+function serialManager() {
+  if (!isAdmin) return admin();
+  const available = serials.filter(s => s.status === 'available').length;
+  view.innerHTML = `
+    <section class="hero compact"><span class="eyebrow">ADMIN · PHYSICAL STOCK</span><h1>Serial<br><em>manager.</em></h1><p>Add the real serial number for every physical unit. Delivery requests will later lock onto one exact serial.</p><div class="hero-actions"><button class="primary" onclick="openSerialDialog()">＋ Add serial</button></div></section>
+    <section class="stats"><div class="stat glass"><small>Total serials</small><b>${serials.length}</b><span>physical units</span></div><div class="stat glass"><small>Available</small><b>${available}</b><span>ready for delivery</span></div><div class="stat glass"><small>Reserved / used</small><b>${serials.length - available}</b><span>not currently available</span></div></section>
+    <section class="panel glass"><div class="head"><div><small class="section-label">SERIAL INVENTORY</small><h2>Physical units</h2></div><span class="pill">${serials.length}</span></div>
+      ${serials.map(s => `<div class="item admin-row"><div class="serial-icon">№</div><div class="itemmain"><b>${esc(s.serial_number)}</b><span>${esc(s.products?.name || 'Unknown product')} · ${esc(s.status || 'available')}</span></div>${s.status === 'available' ? `<button class="smallbtn danger" onclick="deleteSerial('${s.id}')">Delete</button>` : `<span class="pill">${esc(s.status)}</span>`}</div>`).join('') || empty('No serials yet','Add serial numbers for your physical units.')}
+    </section>`;
+}
+
+function openSerialDialog() {
+  if (!isAdmin) return;
+  const select = $('serialProduct');
+  select.innerHTML = products.map(p => `<option value="${esc(p.id)}">${esc(p.name)} · ${Number(p.quantity || 0)} pcs</option>`).join('');
+  $('serialNumber').value = ''; $('serialMsg').textContent = ''; serialDialog.showModal();
+}
+
+async function saveSerial(e) {
+  e?.preventDefault(); if (!isAdmin) return;
+  const btn = $('saveSerialBtn'), msg = $('serialMsg');
+  const product_id = $('serialProduct')?.value, serial_number = $('serialNumber')?.value.trim();
+  if (!product_id || !serial_number) return;
+  busy(btn, true, 'Saving…'); msg.textContent = '';
+  const { error } = await sb.from('product_serials').insert({ product_id, serial_number, status: 'available' });
+  if (error) { msg.textContent = error.message; busy(btn, false); return; }
+  serialDialog.close(); $('serialForm')?.reset(); toast('Serial number added.', 'success'); await loadAll(); render(); busy(btn, false);
+}
+
+async function deleteSerial(id) {
+  if (!isAdmin || !id) return; if (!confirm('Delete this serial number?')) return;
+  const { error } = await sb.from('product_serials').delete().eq('id', id).eq('status', 'available');
+  if (error) return toast(error.message, 'error'); toast('Serial deleted.', 'success'); await loadAll(); render();
+}
+
+$('deliveryUserForm')?.addEventListener('submit', createDeliveryUser);
+$('serialForm')?.addEventListener('submit', saveSerial);
 
 /* =========================
    START
