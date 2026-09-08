@@ -866,15 +866,23 @@ function cards(arr) {
                   <div class="actions">
 
                     <button
-                      class="smallbtn"
+                      type="button"
+                      class="smallbtn edit-btn"
+                      title="Edit ${esc(p.name)}"
+                      aria-label="Edit ${esc(p.name)}"
                       onclick="editProduct('${p.id}')">
-                      Edit
+                      <span class="btn-icon">✎</span>
+                      <span>Edit item</span>
                     </button>
 
                     <button
-                      class="smallbtn danger"
+                      type="button"
+                      class="smallbtn danger delete-btn"
+                      title="Delete ${esc(p.name)}"
+                      aria-label="Delete ${esc(p.name)}"
                       onclick="deleteProduct('${p.id}')">
-                      Delete
+                      <span class="btn-icon">×</span>
+                      <span>Delete item</span>
                     </button>
 
                   </div>
@@ -1160,16 +1168,28 @@ function admin() {
 
 
               <button
-                class="smallbtn"
+                type="button"
+                class="smallbtn edit-btn"
+                title="Edit ${esc(p.name)}"
+                aria-label="Edit ${esc(p.name)}"
                 onclick="editProduct('${p.id}')">
-                Edit
+
+                <span class="btn-icon">✎</span>
+                <span>Edit item</span>
+
               </button>
 
 
               <button
-                class="smallbtn danger"
+                type="button"
+                class="smallbtn danger delete-btn"
+                title="Delete ${esc(p.name)}"
+                aria-label="Delete ${esc(p.name)}"
                 onclick="deleteProduct('${p.id}')">
-                Delete
+
+                <span class="btn-icon">×</span>
+                <span>Delete item</span>
+
               </button>
 
             </div>
