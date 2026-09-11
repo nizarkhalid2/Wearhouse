@@ -185,13 +185,24 @@ function updateAuth() {
 async function loadAll() {
   if (!sb) return;
 
-  const [p, a] = await Promise.all([
-    sb.from('products').select('*').order('created_at', { ascending: false }),
-    sb.from('activity').select('*').order('created_at', { ascending: false }).limit(60)
-  ]);
+  // Products are loaded through a read-only RPC first. This keeps the public
+  // Inventory visible even if an older RLS policy is still present in Supabase.
+  // It does not create, delete or reset any inventory data.
+  let p = await sb.rpc('warehouse_inventory_products');
+  if (p.error) {
+    console.warn('Inventory RPC fallback:', p.error);
+    p = await sb.from('products').select('*').order('created_at', { ascending: false });
+  }
 
-  if (!p.error) products = p.data || [];
-  else console.error('Products:', p.error);
+  const a = await sb.from('activity').select('*').order('created_at', { ascending: false }).limit(60);
+
+  if (!p.error) {
+    products = (p.data || []).sort((x, y) => getDateValue(y) - getDateValue(x));
+  } else {
+    console.error('Products:', p.error);
+    products = [];
+    toast(`Inventory could not load: ${p.error.message || 'read error'}`, 'error');
+  }
 
   if (!a.error) activities = a.data || [];
   else console.warn('Activity:', a.error);
