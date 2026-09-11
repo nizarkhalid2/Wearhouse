@@ -66,8 +66,8 @@ In Supabase, enable Realtime replication for:
 
 1. Admin adds products and serial numbers.
 2. Admin creates a delivery account.
-3. Delivery user signs in and requests an exact serial number.
-4. Admin approves or rejects the request.
-5. Delivery user uploads the delivery note.
-6. Admin completes the delivery.
-7. The serial becomes delivered and product quantity decreases by one.
+3. Delivery user signs in, goes to the warehouse, and types or scans the serial number on the physical item.
+4. The site finds the product automatically from that serial; the delivery user does not choose the product manually.
+5. Admin gives the first approval, reserving that exact serial.
+6. After delivery, the delivery user uploads the delivery note.
+7. Admin gives the final approval. Only then the serial becomes delivered and the product quantity decreases by one.

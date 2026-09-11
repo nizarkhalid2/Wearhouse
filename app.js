@@ -22,6 +22,7 @@ let isAdmin = false;
 let currentPage = 'dashboard';
 let realtimeChannel = null;
 let realtimeTimer = null;
+let selectedDeliveryUnit = null;
 
 const $ = id => document.getElementById(id);
 const view = $('view');
@@ -340,7 +341,7 @@ function cards(arr) {
     const availableSerials = serials.filter(s => s.product_id === p.id && s.status === 'available').length;
     return `<article class="product glass"><div class="imgwrap"><img loading="lazy" src="${safeImg(p.image_url)}" onerror="this.src='${fallback}'"><span class="stock-dot ${Number(p.quantity || 0) <= 7 ? 'warn' : ''}"></span><span class="image-label">${esc(p.category || 'General')}</span></div><div class="body"><div class="product-meta"><span>${esc(p.location)}</span><span>${Number(p.quantity || 0)} pcs</span></div><h3>${esc(p.name)}</h3><p>${esc(p.description || 'No description provided.')}</p><div class="foot"><b>${Number(p.price || 0) > 0 ? Number(p.price).toFixed(2) + ' OMR' : 'Price on request'}</b><span class="badge ${Number(p.quantity || 0) <= 7 ? 'low' : ''}">${Number(p.quantity || 0) <= 7 ? 'Low stock' : 'Available'}</span></div>
       ${isAdmin ? `<div class="actions"><button class="smallbtn" onclick="editProduct('${p.id}')">✎ Edit item</button><button class="smallbtn danger" onclick="deleteProduct('${p.id}')">× Delete item</button></div>` : ''}
-      ${isDelivery() ? `<div class="actions"><button class="smallbtn" ${availableSerials ? `onclick="openDeliveryRequest('${p.id}')"` : 'disabled'}>⇢ Request delivery${availableSerials ? ` · ${availableSerials}` : ' · no serial'}</button></div>` : ''}
+      ${isDelivery() ? `<div class="actions"><button class="smallbtn" onclick="go('deliveries')">⇢ Enter serial in Deliveries</button></div>` : ''}
     </div></article>`;
   }).join('') || empty('No products found', 'Try another search or filter.');
 }
@@ -406,7 +407,7 @@ function deliveries() {
   const completed = deliveryRequests.filter(r => r.status === 'completed').length;
 
   view.innerHTML = `
-    <section class="hero compact"><span class="eyebrow">${isAdmin ? 'ADMIN · DELIVERY CONTROL' : 'DELIVERY WORKSPACE'}</span><h1>${isAdmin ? 'Delivery' : 'My delivery'}<br><em>workflow.</em></h1><p>${isAdmin ? 'Approve requests, review delivery notes and complete handovers.' : 'Request a serialized item, deliver it, then submit the delivery note.'}</p>${isDelivery() ? `<div class="hero-actions"><button class="primary" onclick="openDeliveryRequest()">＋ New delivery request</button></div>` : ''}</section>
+    <section class="hero compact"><span class="eyebrow">${isAdmin ? 'ADMIN · DELIVERY CONTROL' : 'DELIVERY WORKSPACE'}</span><h1>${isAdmin ? 'Delivery' : 'My delivery'}<br><em>workflow.</em></h1><p>${isAdmin ? 'Approve requests, review delivery notes and complete handovers.' : 'Enter or scan the serial number from the warehouse. The product is identified automatically. After delivery, submit the delivery note.'}</p>${isDelivery() ? `<div class="hero-actions"><button class="primary" onclick="openDeliveryRequest()">＋ Enter / scan serial</button></div>` : ''}</section>
     <section class="stats"><div class="stat glass"><small>Pending</small><b>${pending}</b><span>waiting approval</span></div><div class="stat glass"><small>Approved</small><b>${approved}</b><span>ready / moving</span></div><div class="stat glass"><small>Notes ready</small><b>${noteReady}</b><span>waiting review</span></div><div class="stat glass"><small>Completed</small><b>${completed}</b><span>finished</span></div></section>
     <section class="panel glass delivery-list"><div class="head"><div><small class="section-label">${isAdmin ? 'ALL REQUESTS' : 'YOUR REQUESTS'}</small><h2>Deliveries</h2></div><span class="pill">${deliveryRequests.length}</span></div>${deliveryRequests.map(deliveryCard).join('') || empty('No delivery requests', isDelivery() ? 'Create your first request above.' : 'New requests will appear here.')}</section>`;
 }
@@ -418,7 +419,7 @@ function deliveryCard(r) {
   if (isAdmin) {
     if (r.status === 'pending_admin_approval') actions = `<button class="smallbtn" onclick="approveDelivery('${r.id}')">✓ Approve</button><button class="smallbtn danger" onclick="rejectDelivery('${r.id}')">Reject</button>`;
     else if (r.status === 'approved_for_delivery') actions = `<button class="smallbtn danger" onclick="rejectDelivery('${r.id}')">Cancel / reject</button>`;
-    else if (r.status === 'delivery_note_submitted') actions = `<button class="smallbtn" onclick="viewDeliveryNote('${r.id}')">View note</button><button class="smallbtn" onclick="completeDelivery('${r.id}')">✓ Complete</button><button class="smallbtn danger" onclick="rejectDelivery('${r.id}')">Reject</button>`;
+    else if (r.status === 'delivery_note_submitted') actions = `<button class="smallbtn" onclick="viewDeliveryNote('${r.id}')">View note</button><button class="smallbtn" onclick="completeDelivery('${r.id}')">✓ Final approve & deduct stock</button><button class="smallbtn danger" onclick="rejectDelivery('${r.id}')">Reject</button>`;
     else if (r.delivery_note_url) actions = `<button class="smallbtn" onclick="viewDeliveryNote('${r.id}')">View note</button>`;
   } else if (isDelivery() && r.status === 'approved_for_delivery') {
     actions = `<button class="smallbtn" onclick="openDeliveryNote('${r.id}')">Upload delivery note</button>`;
@@ -573,25 +574,61 @@ async function deleteSerial(id) {
   render();
 }
 
-function openDeliveryRequest(productId = '') {
+function openDeliveryRequest() {
   if (!isDelivery()) return;
-  const productsWithUnits = products.filter(p => serials.some(s => s.product_id === p.id && s.status === 'available'));
-  if (!productsWithUnits.length) return toast('No available serial numbers.', 'error');
-  $('drProduct').innerHTML = productsWithUnits.map(p => `<option value="${esc(p.id)}">${esc(p.name)} · ${esc(p.location)}</option>`).join('');
-  if (productId && productsWithUnits.some(p => p.id === productId)) $('drProduct').value = productId;
-  fillDeliveryUnits();
+  const availableUnits = serials.filter(s => s.status === 'available');
+  if (!availableUnits.length) return toast('No available serial numbers in the warehouse.', 'error');
+
+  selectedDeliveryUnit = null;
   $('deliveryRequestForm').reset();
-  if (productId && productsWithUnits.some(p => p.id === productId)) $('drProduct').value = productId;
-  fillDeliveryUnits();
+  $('serialSuggestions').innerHTML = availableUnits.map(s => {
+    const p = products.find(x => x.id === s.product_id);
+    return `<option value="${esc(s.serial_number)}">${esc(p?.name || 'Product')} · ${esc(p?.location || '—')}</option>`;
+  }).join('');
+  $('drSerialPreview').classList.add('hidden');
+  $('drSerialPreview').innerHTML = '';
   $('drDate').value = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
   $('deliveryRequestMsg').textContent = '';
   deliveryRequestDialog.showModal();
+  setTimeout(() => $('drSerial')?.focus(), 80);
 }
 
-function fillDeliveryUnits() {
-  const productId = $('drProduct')?.value;
-  const units = serials.filter(s => s.product_id === productId && s.status === 'available');
-  if ($('drUnit')) $('drUnit').innerHTML = units.map(s => `<option value="${esc(s.id)}">${esc(s.serial_number)}</option>`).join('');
+function lookupDeliverySerial() {
+  const input = $('drSerial');
+  const preview = $('drSerialPreview');
+  if (!input || !preview) return null;
+
+  const raw = input.value.trim();
+  selectedDeliveryUnit = null;
+
+  if (!raw) {
+    preview.classList.add('hidden');
+    preview.innerHTML = '';
+    return null;
+  }
+
+  const unit = serials.find(s => String(s.serial_number || '').toLowerCase() === raw.toLowerCase());
+  if (!unit) {
+    preview.classList.remove('hidden');
+    preview.innerHTML = `<div><b>Serial not found</b><span>Check the serial number and try again.</span></div><span>✕</span>`;
+    return null;
+  }
+
+  const product = products.find(p => p.id === unit.product_id);
+  const hasActiveRequest = deliveryRequests.some(r =>
+    r.unit_id === unit.id && ['pending_admin_approval', 'approved_for_delivery', 'delivery_note_submitted'].includes(r.status)
+  );
+
+  if (unit.status !== 'available' || hasActiveRequest) {
+    preview.classList.remove('hidden');
+    preview.innerHTML = `<div><b>${esc(product?.name || 'Product')}</b><span>${esc(unit.serial_number)} · ${hasActiveRequest ? 'Already in an active delivery request' : esc(statusLabel(unit.status))}</span></div><span>Not available</span>`;
+    return null;
+  }
+
+  selectedDeliveryUnit = unit;
+  preview.classList.remove('hidden');
+  preview.innerHTML = `<div><b>✓ ${esc(product?.name || 'Product')}</b><span>${esc(unit.serial_number)} · Warehouse location ${esc(product?.location || '—')} · ${Number(product?.quantity || 0)} pcs in inventory</span></div><span>Available</span>`;
+  return unit;
 }
 
 async function submitDeliveryRequest(e) {
@@ -599,27 +636,37 @@ async function submitDeliveryRequest(e) {
   if (!isDelivery()) return;
   const btn = $('submitDeliveryRequestBtn');
   const msg = $('deliveryRequestMsg');
+  const unit = lookupDeliverySerial();
+  const product = unit ? products.find(p => p.id === unit.product_id) : null;
+
+  if (!unit || !product) {
+    msg.textContent = 'Enter a valid available serial number first.';
+    $('drSerial')?.focus();
+    return;
+  }
+
   const payload = {
     delivery_guy_id: user.id,
-    product_id: $('drProduct').value,
-    unit_id: $('drUnit').value,
+    product_id: product.id,
+    unit_id: unit.id,
     destination: $('drDestination').value.trim(),
     recipient: $('drRecipient').value.trim(),
     delivery_date: $('drDate').value,
     notes: $('drNotes').value.trim()
   };
-  if (!payload.product_id || !payload.unit_id || !payload.destination || !payload.delivery_date) return;
+  if (!payload.destination || !payload.delivery_date) return;
   busy(btn, true, 'Submitting…');
   msg.textContent = '';
   try {
     const { error } = await sb.from('delivery_requests').insert(payload);
     if (error) throw error;
     deliveryRequestDialog.close();
-    toast('Delivery request sent for approval.');
+    selectedDeliveryUnit = null;
+    toast('Serial found and delivery request sent for admin approval.');
     await loadAll();
     go('deliveries');
   } catch (err) {
-    msg.textContent = err.code === '23505' ? 'This serial already has an active request.' : (err.message || 'Could not submit request.');
+    msg.textContent = err.code === '23505' ? 'This serial already has an active delivery request.' : (err.message || 'Could not submit request.');
   } finally {
     busy(btn, false);
   }
@@ -798,7 +845,8 @@ $('pImageFile')?.addEventListener('change', e => { if (e.target.files[0]) previe
 $('deliveryUserForm')?.addEventListener('submit', createDeliveryUser);
 $('serialForm')?.addEventListener('submit', saveSerial);
 $('deliveryRequestForm')?.addEventListener('submit', submitDeliveryRequest);
-$('drProduct')?.addEventListener('change', fillDeliveryUnits);
+$('drSerial')?.addEventListener('input', lookupDeliverySerial);
+$('drSerial')?.addEventListener('change', lookupDeliverySerial);
 $('deliveryNoteForm')?.addEventListener('submit', submitDeliveryNote);
 
 boot();

@@ -69,13 +69,14 @@
 </form></dialog>
 
 <dialog id="deliveryRequestDialog"><form id="deliveryRequestForm" class="modal glass">
-  <button type="button" class="close" onclick="deliveryRequestDialog.close()">×</button><span class="eyebrow">NEW DELIVERY</span><h2>Request an item.</h2><p>Choose the exact serialized unit that needs to leave the warehouse.</p>
-  <label>Product<select id="drProduct" required></select></label>
-  <label>Serial number<select id="drUnit" required></select></label>
+  <button type="button" class="close" onclick="deliveryRequestDialog.close()">×</button><span class="eyebrow">WAREHOUSE SERIAL</span><h2>Enter the serial number.</h2><p>Type or scan the serial on the physical item. The product will be found automatically.</p>
+  <label>Serial number<input id="drSerial" required maxlength="120" list="serialSuggestions" autocomplete="off" placeholder="Scan or enter serial…"></label>
+  <datalist id="serialSuggestions"></datalist>
+  <div id="drSerialPreview" class="delivery-item-preview hidden"></div>
   <label>Destination<input id="drDestination" required maxlength="200" placeholder="Customer / site / address"></label>
   <div class="twocol"><label>Recipient<input id="drRecipient" maxlength="120" placeholder="Recipient name"></label><label>Delivery date<input id="drDate" type="date" required></label></div>
   <label>Notes<textarea id="drNotes" maxlength="500" placeholder="Optional notes"></textarea></label>
-  <button class="primary" id="submitDeliveryRequestBtn">Send for approval</button><p id="deliveryRequestMsg" class="error"></p>
+  <button class="primary" id="submitDeliveryRequestBtn">Send for first admin approval</button><p id="deliveryRequestMsg" class="error"></p>
 </form></dialog>
 
 <dialog id="deliveryNoteDialog"><form id="deliveryNoteForm" class="modal glass">
