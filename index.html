@@ -46,7 +46,10 @@
   <button type="button" class="close" onclick="productDialog.close()">×</button><span class="eyebrow">INVENTORY ITEM</span><h2 id="formTitle">Add item</h2><input id="productId" type="hidden">
   <label>Name<input id="pName" required maxlength="120" placeholder="Product name"></label>
   <label>Description<textarea id="pDesc" maxlength="500" placeholder="Short description"></textarea></label>
-  <div class="twocol"><label>Quantity<input id="pQty" type="number" min="0" required placeholder="0"></label><label>Location<input id="pLoc" required maxlength="50" placeholder="A-01"></label></div>
+  <div class="twocol"><label>Quantity<input id="pQty" type="number" min="0" readonly placeholder="Auto from serials"><small class="field-note">Calculated automatically from serial numbers.</small></label><label>Location<input id="pLoc" required maxlength="50" placeholder="A-01"></label></div>
+  <label id="pSerialsLabel">Serial numbers<textarea id="pSerials" rows="5" placeholder="One serial per line, for example:
+SN-000001
+SN-000002"></textarea><small class="field-note">For a new product, add every physical unit serial here. Quantity is calculated automatically.</small></label>
   <div class="twocol"><label>Category<input id="pCat" maxlength="60" placeholder="General"></label><label>Price (OMR)<input id="pPrice" type="number" min="0" step=".01" placeholder="0.00"></label></div>
   <label>Product image<input id="pImageFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif"><small class="field-note">PNG, JPG, WEBP or GIF · max 5 MB</small></label>
   <label>Or image URL<input id="pImage" placeholder="https://..."></label><div id="imagePreview" class="image-preview hidden"></div>

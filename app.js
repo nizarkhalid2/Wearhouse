@@ -95,6 +95,16 @@ function statusLabel(status) {
   })[status] || status || 'Unknown';
 }
 
+function parseProductSerials() {
+  const raw = $('pSerials')?.value || '';
+  return [...new Set(raw.split(/[\n,;]+/).map(x => x.trim()).filter(Boolean))];
+}
+
+function syncProductQuantityFromSerials() {
+  if ($('productId')?.value) return;
+  if ($('pQty')) $('pQty').value = String(parseProductSerials().length);
+}
+
 async function boot() {
   if (!sb) return renderSetup();
 
@@ -444,8 +454,14 @@ function openAdd() {
   if (!isAdmin) return loginDialog.showModal();
   $('productForm').reset();
   $('productId').value = '';
-  $('formTitle').textContent = 'Add item';
+  $('formTitle').textContent = 'Add item + serials';
   $('formMsg').textContent = '';
+  if ($('pQty')) $('pQty').value = '0';
+  if ($('pSerialsLabel')) $('pSerialsLabel').classList.remove('hidden');
+  if ($('pSerials')) {
+    $('pSerials').value = '';
+    $('pSerials').required = true;
+  }
   $('imagePreview').classList.add('hidden');
   productDialog.showModal();
 }
@@ -457,6 +473,11 @@ function editProduct(id) {
   $('pName').value = p.name || '';
   $('pDesc').value = p.description || '';
   $('pQty').value = p.quantity ?? 0;
+  if ($('pSerialsLabel')) $('pSerialsLabel').classList.add('hidden');
+  if ($('pSerials')) {
+    $('pSerials').value = '';
+    $('pSerials').required = false;
+  }
   $('pLoc').value = p.location || '';
   $('pCat').value = p.category || 'General';
   $('pPrice').value = p.price ?? 0;
@@ -787,27 +808,61 @@ $('productForm').onsubmit = async e => {
   const btn = $('saveProduct');
   busy(btn, true);
   $('formMsg').textContent = '';
+  let createdProductId = null;
+
   try {
     let image = $('pImage').value.trim();
     const file = $('pImageFile').files[0];
     if (file) image = await uploadImage(file);
+
+    const id = $('productId').value;
+    const newSerials = id ? [] : parseProductSerials();
+    if (!id && newSerials.length === 0) throw Error('Add at least one serial number.');
+
     const payload = {
       name: $('pName').value.trim(),
       description: $('pDesc').value.trim(),
-      quantity: Math.max(0, Number($('pQty').value) || 0),
+      quantity: id ? Math.max(0, Number($('pQty').value) || 0) : newSerials.length,
       location: $('pLoc').value.trim(),
       category: $('pCat').value.trim() || 'General',
       price: Math.max(0, Number($('pPrice').value) || 0),
       image_url: image
     };
-    const id = $('productId').value;
-    const r = id ? await sb.from('products').update(payload).eq('id', id) : await sb.from('products').insert(payload);
-    if (r.error) throw r.error;
+
+    if (id) {
+      const { data, error } = await sb.from('products').update(payload).eq('id', id).select('*').single();
+      if (error) throw error;
+      const i = products.findIndex(p => p.id === id);
+      if (i >= 0 && data) products[i] = data;
+      toast('Item updated');
+    } else {
+      const { data: product, error } = await sb.from('products').insert(payload).select('*').single();
+      if (error) throw error;
+      if (!product?.id) throw Error('Product was not returned after saving.');
+      createdProductId = product.id;
+
+      const rows = newSerials.map(serial_number => ({
+        product_id: product.id,
+        serial_number,
+        status: 'available'
+      }));
+      const { data: createdSerials, error: serialError } = await sb.from('inventory_units').insert(rows).select('*');
+      if (serialError) {
+        await sb.from('products').delete().eq('id', product.id);
+        throw serialError;
+      }
+
+      products.unshift(product);
+      serials.unshift(...(createdSerials || []).map(x => ({ ...x, products: { name: product.name, location: product.location, image_url: product.image_url } })));
+      toast(`Item added · ${newSerials.length} serial${newSerials.length === 1 ? '' : 's'}`);
+    }
+
     productDialog.close();
-    toast(id ? 'Item updated' : 'Item added');
     await loadAll();
+    currentPage = 'admin';
     render();
   } catch (err) {
+    console.error('Save product failed:', err);
     $('formMsg').textContent = err.message || String(err);
   } finally {
     busy(btn, false);
@@ -848,5 +903,7 @@ $('deliveryRequestForm')?.addEventListener('submit', submitDeliveryRequest);
 $('drSerial')?.addEventListener('input', lookupDeliverySerial);
 $('drSerial')?.addEventListener('change', lookupDeliverySerial);
 $('deliveryNoteForm')?.addEventListener('submit', submitDeliveryNote);
+
+$('pSerials')?.addEventListener('input', syncProductQuantityFromSerials);
 
 boot();
