@@ -838,24 +838,21 @@ $('productForm').onsubmit = async e => {
       if (i >= 0 && data) products[i] = data;
       toast('Item updated');
     } else {
-      const { data: product, error } = await sb.from('products').insert(payload).select('*').single();
+      // Create the product and all serials in ONE database transaction.
+      // If any serial already exists, Supabase rolls the whole attempt back.
+      // Existing inventory is never deleted or reset.
+      const { data, error } = await sb.rpc('create_product_with_serials', {
+        p_name: payload.name,
+        p_description: payload.description,
+        p_location: payload.location,
+        p_category: payload.category,
+        p_price: payload.price,
+        p_image_url: payload.image_url,
+        p_serials: newSerials
+      });
       if (error) throw error;
+      const product = Array.isArray(data) ? data[0] : data;
       if (!product?.id) throw Error('Product was not returned after saving.');
-      createdProductId = product.id;
-
-      const rows = newSerials.map(serial_number => ({
-        product_id: product.id,
-        serial_number,
-        status: 'available'
-      }));
-      const { data: createdSerials, error: serialError } = await sb.from('inventory_units').insert(rows).select('*');
-      if (serialError) {
-        await sb.from('products').delete().eq('id', product.id);
-        throw serialError;
-      }
-
-      products.unshift(product);
-      serials.unshift(...(createdSerials || []).map(x => ({ ...x, products: { name: product.name, location: product.location, image_url: product.image_url } })));
       toast(`Item added · ${newSerials.length} serial${newSerials.length === 1 ? '' : 's'}`);
     }
 

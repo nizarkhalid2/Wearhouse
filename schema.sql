@@ -569,3 +569,9 @@ where not exists (select 1 from public.products);
 
 -- Realtime: enable these tables in Supabase Dashboard -> Database -> Replication:
 -- products, activity, inventory_units, delivery_requests, notifications, profiles
+
+-- ============================================================
+-- PERSISTENCE SAFETY (product + serial consistency)
+-- ============================================================
+-- For upgrades of an existing project, run persistence-safe.sql.
+-- It never deletes inventory data.
