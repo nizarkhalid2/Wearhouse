@@ -132,8 +132,10 @@ as $$
     select 1
     from public.profiles p
     where p.id = auth.uid()
-      and p.role = 'delivery_guy'
       and p.active = true
+      and not exists (
+        select 1 from public.admin_users a where a.user_id = p.id
+      )
   );
 $$;
 

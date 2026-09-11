@@ -33,7 +33,7 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({
 }[c]));
 
 const safeImg = value => value && /^https?:\/\//i.test(value) ? value : fallback;
-const isDelivery = () => !!user && profile?.role === 'delivery_guy' && profile?.active !== false;
+const isDelivery = () => !!user && !isAdmin && !!profile && profile?.active !== false;
 const isStaff = () => isAdmin || isDelivery();
 
 function toast(message, kind = '') {
@@ -113,6 +113,7 @@ async function boot() {
     user = data?.session?.user || null;
     await refreshAuth();
     await loadAll();
+    if (isDelivery()) currentPage = 'deliveries';
     subscribeRealtime();
     setConnection(true);
     render();
@@ -126,6 +127,7 @@ async function boot() {
     user = session?.user || null;
     await refreshAuth();
     await loadAll();
+    if (isDelivery()) currentPage = 'deliveries';
     subscribeRealtime();
     if (event === 'SIGNED_IN' && isDelivery()) currentPage = 'deliveries';
     if (!user && ['deliveries', 'users', 'serials', 'notifications'].includes(currentPage)) currentPage = 'dashboard';
@@ -160,7 +162,7 @@ function updateAuth() {
       : isAdmin
         ? `Admin · ${name}`
         : isDelivery()
-          ? `Delivery · ${name}`
+          ? `Warehouse staff · ${name}`
           : `Signed in · ${name}`;
   }
   if ($('avatar')) $('avatar').textContent = String(name).slice(0, 1).toUpperCase();
